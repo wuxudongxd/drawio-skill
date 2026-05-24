@@ -47,6 +47,17 @@ waypoint.y 应在泳道间 gap 的中点 = (上段.bottom + 下段.top) / 2
 
 **解法**:标签放在线的空白段(gap 区),不要放在穿越元素的段上。
 
+**陷阱**:能画直线的地方出现了多余弯折(orthogonalEdgeStyle 自动路由导致)。
+
+**解法**:精确计算 exit/entry 的绝对 x 或 y,确保对齐。如果两端 x 差值 < 1px,线就是直的;差值大了就会产生水平弯折段。能直的线绝不弯折。
+
+**对齐公式**:当 source 节点中心 x 与 target 泳道中心 x 不匹配时:
+```
+exit_abs_x = source_swimlane.x + node.x + node.width * exitX
+entryX = (exit_abs_x - target.x) / target.width
+```
+同理,如果节点位置导致出口偏移,也可以反向调整节点 x 使其中心对齐。
+
 ## 四、Fieldset Legend 标签
 
 **陷阱**:泳道子元素(parent=swimlane)不能超出 startSize 标题栏区域,导致标签位置受限。
@@ -68,34 +79,112 @@ waypoint.y 应在泳道间 gap 的中点 = (上段.bottom + 下段.top) / 2
 - 连线标签:11px
 - 图例:11px
 
-**颜色规则**:建立图例并严格遵守,每种颜色对应一个语义角色,不随意分配。
-
 **间距(呼吸感)**:
-- 泳道间 gap:60-80px
+- 泳道间 gap:60px(全图统一,不能有的紧有的松)
 - 节点间 gap:24-26px
 - 节点内 padding:spacingLeft=14, spacingTop=12
 
 **一致性**:
-- 同层级节点宽度一致
+- 同层级节点宽度一致,高度尽量一致
 - 箭头统一 `endArrow=classic;endFill=1`
 - 不用虚线(除非有明确语义)
 - 所有节点用 `html=1` + `absoluteArcSize=1;arcSize=8`
+
+**内容准确**:
+- 外部依赖只放 package.json / CDN 引入的直接依赖,间接依赖用详情文字描述,不单独开节点
+- 信息量少的节点(≤2行)不需要标题/详情分层,加粗分色反而增加噪音
 
 ## 六、元素与边框间距
 
 **陷阱**:节点到泳道边框的上下 padding 不一致 — 上面紧贴标题栏,下面大片空白,或反过来。
 
 **解法**:
-- 用脚本计算: `上padding = 首节点.y - startSize`, `下padding = 泳道.height - (末节点.y + 末节点.height)`
-- 上下 padding 差值控制在 6px 以内
-- 推荐值: 上下各 12-16px
+- 标准值: **上下各 16px**
+- 计算: `上padding = 首节点.y - startSize`, `下padding = 泳道.height - (末节点.y + 末节点.height)`
+- 上下 padding 差值控制在 **4px 以内**
+- **用验证脚本逐个泳道检查**,不能靠肉眼或猜测
 - **算完必须导出 PNG 看图确认** — drawio 内部坐标和渲染结果可能有偏差
 
-**泳道间距**:泳道与泳道之间的 gap 必须保持一致(推荐 50-60px),不能有的紧有的松。用脚本验证: `gap = 下一泳道.y - (上一泳道.y + 上一泳道.height)`
+**泳道间距**:泳道与泳道之间的 gap 必须全图一致(标准值 **60px**)。用脚本验证: `gap = 下一泳道.y - (上一泳道.y + 上一泳道.height)`
 
-## 七、工作流程
+**验证脚本模板**:
+```python
+top_pad = first_node_y - startSize
+bottom_pad = swimlane_height - (last_node_y + last_node_height)
+gap = next_swimlane_y - (current_swimlane_y + current_swimlane_height)
+assert abs(top_pad - bottom_pad) <= 4, f"padding 不一致: top={top_pad}, bottom={bottom_pad}"
+assert gap == 60, f"gap 不一致: {gap}"
+```
 
-1. **每次改动必须导出 PNG 并用 vision 看图验证** — 不能只看代码
-2. 一次修多个问题优于反复小改(避免回归)
-3. 坐标计算要精确 — 泳道子元素用相对坐标,跨泳道连线用绝对坐标
-4. 自己判断"可接受"无效 — 必须用户确认
+## 七、颜色规则
+
+**线条一律黑色** — 不加 `strokeColor` 即可,默认黑色。线本身不承载语义区分,节点填充色和标签文字色才承载。
+
+**标签文字跟随链路色** — 例如 Webmake 链路的标签文字用绿色 (#82b366),Magpie 链路用紫色 (#9673a6),与图例中对应色系保持一致。
+
+**全图一致性** — 同一语义的标签,无论出现在哪个 gap 或哪条 edge 上,必须使用相同颜色。不能上面用了绿色,下面同名标签却变成黑色。
+
+**图例必须建立并严格遵守** — 每种填充色对应一个语义角色,不随意分配。
+
+**判断前先自问** — "这个颜色有依据吗？和图例一致吗？全图统一了吗？" 不要凭感觉随意分配。
+
+## 八、文字与标签背景
+
+**陷阱 (z-order)**:draw.io 按 XML 文档顺序渲染——后定义的元素画在上层。如果独立标签(text 元素)定义在 edge 之前,edge 的线条会画在标签上方,即使标签有 `fillColor` 也会被线穿透。
+
+**解法**:gap 中需要覆盖线条的标签,**不要用独立 text 元素**,直接把文字放在 edge 的 `value` 属性上,配合 `labelBackgroundColor=#ffffff`:
+```xml
+<mxCell id="e_xxx" value="标签文字" style="...endArrow=classic;endFill=1;fontSize=11;fontStyle=1;fontColor=#xxx;labelBackgroundColor=#ffffff;" .../>
+```
+这样标签由 edge 自身渲染,保证背景在线条之上。
+
+**陷阱 (`text` 形状)**:`text` 形状的 `fillColor` 在某些导出模式/渲染器下不渲染为实心背景。
+
+**解法**:如果必须用独立元素(不能放在 edge value 上),用标准矩形替代 `text` 形状,并确保在 XML 中定义在相关 edge 之后:
+```
+style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fontColor=#xxx;align=center;verticalAlign=middle;fillColor=#ffffff;strokeColor=none;"
+```
+
+**Gap 区标签定位**:标签放在 gap 中点(y = gap_mid - label_height/2),确保白底完全覆盖线条。
+
+## 八½、边标签冗余判断
+
+**原则**:当目标节点标题已包含分支语义时,edge 上的标签是冗余的,应该去掉。
+
+**需要边标签的场景**:
+- 条件分支(yes/no、成功/失败)
+- 连接语义不能从两端节点名推断
+- 多条边从同一节点出发,需要区分用途
+
+**不需要边标签的场景**:
+- 目标节点标题已经写了分支名称(如 "Magpie: emit before-render")
+- 只有一条入边,连接语义显而易见
+
+**判断方法**:遮住边标签,只看源节点和目标节点——如果仍然能理解分支语义,标签就是冗余的。
+
+## 九、改动后全局级联检查
+
+**陷阱**:改了一个泳道的 y 或 height 后,只更新了该泳道内部元素,忽略了所有依赖绝对坐标的外部元素,导致标签错位、线条偏移。
+
+**必须同步更新的元素清单**:
+1. **下游泳道 y** — 逐个向下级联: `next.y = current.y + current.height + gap`
+2. **gap 中的独立标签** (parent="1") — y = 新 gap 中点 - label_height/2
+3. **gap 中的 waypoints** — mxPoint 的 y 值需要更新到新 gap 区域
+4. **Fieldset Legend 标签** (parent="1") — y = 新 build_box_abs_top - label_height/2
+5. **跨泳道 edge 的 entry/exit 比例** — 如果目标泳道尺寸变了,entryX/entryY 比例可能需要重算
+6. **pageHeight / dy** — 整体画布可能需要调大
+
+**检查顺序**:
+```
+改泳道 y/h → 级联更新下游泳道 y → 重算 gap 中标签 y → 重算 waypoint y → 重算 legend y → 导出 PNG → 逐区域验证
+```
+
+## 十、工作流程
+
+1. **每次改动必须导出 PNG 并用 vision 看图验证** — 不能只看代码。drawio 内部坐标和实际渲染可能有偏差。
+2. **全局看图,不只看局部** — 改了一处后,整张图从上到下扫一遍,检查是否引入新问题(标签错位、线偏移、间距变化)。
+3. **一次修多个问题优于反复小改** — 避免改一处引发另一处回归。
+4. **坐标计算要精确** — 泳道子元素用相对坐标,跨泳道连线/标签用绝对坐标。
+5. **自己判断"可接受"无效** — 必须用户确认。
+6. **用验证脚本量化检查** — padding、gap 等用脚本算出精确值,不靠肉眼估计。
+7. **XML 编辑注意去重** — 避免产生 duplicate mxGeometry 等问题。
