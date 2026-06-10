@@ -58,6 +58,16 @@ entryX = (exit_abs_x - target.x) / target.width
 ```
 同理,如果节点位置导致出口偏移,也可以反向调整节点 x 使其中心对齐。
 
+**陷阱**:waypoint 与 pinned entry 的坐标不一致产生死折。例如 waypoint x=560 但 entry 绝对 x=600,渲染出一个 40px 的无意义拐角。垂直进入时 `waypoint.x === entry_abs_x`,水平进入时 `waypoint.y === entry_abs_y`,必须逐条用算式核对,不能目测。
+
+**陷阱**:走廊绕行(corridor routing)时,最后一个 waypoint 离 target 边缘太近,箭头压在弯角上。例如 waypoint y=980 而 target 底边 y=970,stub 只有 10px(规则要求 ≥20px)。
+
+**解法**:绕行路由写完后逐条验证 `abs(last_waypoint - target_edge) >= 20`,不足就把 waypoint 往走廊深处移。
+
+**陷阱**:主路径(高视觉权重的边)出现 dogleg,因为 source 中心与 target 入口没有对上。
+
+**解法**:优先移动节点让最重要的边走直线(如把 WAF 整体右移 100px,让移动端主路径垂直直落),次要边才接受 Z 形绕行。"能直则直"的优先级按边的视觉权重排序。
+
 ## 四、Fieldset Legend 标签
 
 **陷阱**:泳道子元素(parent=swimlane)不能超出 startSize 标题栏区域,导致标签位置受限。
@@ -179,9 +189,16 @@ style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fontColor=#xxx;a
 改泳道 y/h → 级联更新下游泳道 y → 重算 gap 中标签 y → 重算 waypoint y → 重算 legend y → 导出 PNG → 逐区域验证
 ```
 
+## 九½、竖排泳道标题
+
+**陷阱**:`swimlane;horizontal=0;` 的标题竖排在 30px 侧条里,字数受泳道高度限制。"业务服务层 · 事件总线居中" 这类带说明的长标题会挤压变形。
+
+**解法**:泳道标签只写层名(如"业务服务层"),设计说明放图外文字或副标题,不塞进泳道标签。
+
 ## 十、工作流程
 
 1. **每次改动必须导出 PNG 并用 vision 看图验证** — 不能只看代码。drawio 内部坐标和实际渲染可能有偏差。
+   - **全图缩略 vision 检查发现不了 <40px 级别的错位**(死折、5px 偏移、过短的箭头 stub)。复杂图必须二选一:(a) 用 PIL 裁剪 2-3 个关键区域放大后逐区 vision 检查;(b) 用脚本对每条 edge 断言 waypoint/entry/exit 坐标对齐。只看整图缩略等于没检查。
 2. **全局看图,不只看局部** — 改了一处后,整张图从上到下扫一遍,检查是否引入新问题(标签错位、线偏移、间距变化)。
 3. **一次修多个问题优于反复小改** — 避免改一处引发另一处回归。
 4. **坐标计算要精确** — 泳道子元素用相对坐标,跨泳道连线/标签用绝对坐标。

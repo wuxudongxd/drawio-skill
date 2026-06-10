@@ -27,6 +27,7 @@ When the workflow references one of these, read it on demand — none of them ne
 |---|---|
 | `references/visual-communication.md` | Planning a non-trivial diagram (step 2) — message-first framework, comparison-type → chart-form matrix, concept-visual grammar, emphasis rules (from Zelazny's *Say It with Charts*) |
 | `references/diagram-types.md` | The user names a specific diagram type (ERD, UML class, sequence, architecture, ML/DL, flowchart) |
+| `references/pitfalls.md` | Before generating or editing XML for any multi-container / multi-edge diagram — battle-tested geometry pitfalls (waypoint↔entry alignment, arrowhead stubs, swimlane padding, label z-order, cascade updates) |
 | `references/style-presets.md` | The user asks to learn / save / list / set-default / delete a style preset, or you've resolved an active preset and need the application rules |
 | `references/style-extraction.md` | You're inside the Learn flow and need the extraction procedure (called from `style-presets.md`) |
 | `references/troubleshooting.md` | An export fails, vision rejects a PNG, or a rendering looks wrong |
