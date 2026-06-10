@@ -1,12 +1,12 @@
 ---
 name: drawio-skill
-version: 1.6.0
+version: 1.6.1
 description: Use when the user requests diagrams, flowcharts, architecture diagrams, ER diagrams, UML / sequence / class diagrams, network topology, ML/DL model figures (Transformer/CNN/LSTM), mind maps, or any visualization. Also use proactively when explaining systems with 3+ components, complex data flows, or relationships that benefit from visual representation. Best suited when the diagram needs custom styling, rich shape vocabulary, swimlanes, or exportable images (PNG/SVG/PDF/JPG). Generates .drawio XML and exports locally via the native draw.io desktop CLI.
 license: MIT
 homepage: https://github.com/Agents365-ai/drawio-skill
 compatibility: Requires draw.io desktop app CLI on PATH (macOS/Linux/Windows). Self-check step requires a vision-enabled model (e.g., Claude Sonnet/Opus); gracefully skipped if unavailable.
 platforms: [macos, linux, windows]
-metadata: {"openclaw":{"requires":{"anyBins":["draw.io","drawio"]},"emoji":"📐","os":["darwin","linux","win32"],"install":[{"id":"brew-drawio","kind":"brew","formula":"drawio","bins":["draw.io"],"label":"Install draw.io via Homebrew","os":["darwin"]}]},"hermes":{"tags":["drawio","diagram","flowchart","architecture","visualization","uml"],"category":"design","requires_tools":["draw.io"],"related_skills":["mermaid","excalidraw","plantuml"]},"author":"Agents365-ai","version":"1.6.0"}
+metadata: {"openclaw":{"requires":{"anyBins":["draw.io","drawio"]},"emoji":"📐","os":["darwin","linux","win32"],"install":[{"id":"brew-drawio","kind":"brew","formula":"drawio","bins":["draw.io"],"label":"Install draw.io via Homebrew","os":["darwin"]}]},"hermes":{"tags":["drawio","diagram","flowchart","architecture","visualization","uml"],"category":"design","requires_tools":["draw.io"],"related_skills":["mermaid","excalidraw","plantuml"]},"author":"Agents365-ai","version":"1.6.1"}
 ---
 
 # Draw.io Diagrams
@@ -111,9 +111,12 @@ After exporting the draft PNG, use the agent's vision capability (e.g., Claude's
 | Off-canvas shapes | Shapes at negative coordinates or far from the main group | Move to positive coordinates near the cluster |
 | Edge-shape overlap | An edge/arrow visually crosses through an unrelated shape | Add waypoints (`<Array as="points">`) to route around the shape, or increase spacing between shapes |
 | Stacked edges | Multiple edges overlap each other on the same path | Distribute entry/exit points across the shape perimeter (use different exitX/entryX values) |
+| Dogleg kinks | An edge bends where a straight line is possible | Recompute: waypoint x/y must exactly equal the pinned entry/exit absolute coordinate |
+| Short arrowhead stub | Final segment between last bend and target < 20px — arrowhead sits on the bend | Move the last waypoint deeper into the corridor: `abs(waypoint − target_edge) ≥ 20` |
 
 - Max **2 self-check rounds** — if issues remain after 2 fixes, show the user anyway
 - Re-export after each fix and re-read the new PNG
+- **Full-image vision misses sub-40px defects** (doglegs, 5px offsets, short stubs). For complex diagrams (>10 nodes or any waypoint routing), do one of: (a) crop 2–3 key regions (e.g. with Python/PIL) and vision-check each at full resolution; (b) numerically assert waypoint↔entry/exit alignment per edge. A thumbnail-only pass is not a check — see `references/pitfalls.md` §三/§十.
 
 ### Step 6: Review Loop
 
