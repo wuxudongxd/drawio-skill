@@ -1,12 +1,12 @@
 ---
 name: drawio-skill
-version: 1.6.1
+version: 1.7.0
 description: Use when the user requests diagrams, flowcharts, architecture diagrams, ER diagrams, UML / sequence / class diagrams, network topology, ML/DL model figures (Transformer/CNN/LSTM), mind maps, or any visualization. Also use proactively when explaining systems with 3+ components, complex data flows, or relationships that benefit from visual representation. Best suited when the diagram needs custom styling, rich shape vocabulary, swimlanes, or exportable images (PNG/SVG/PDF/JPG). Generates .drawio XML and exports locally via the native draw.io desktop CLI.
 license: MIT
 homepage: https://github.com/Agents365-ai/drawio-skill
 compatibility: Requires draw.io desktop app CLI on PATH (macOS/Linux/Windows). Self-check step requires a vision-enabled model (e.g., Claude Sonnet/Opus); gracefully skipped if unavailable.
 platforms: [macos, linux, windows]
-metadata: {"openclaw":{"requires":{"anyBins":["draw.io","drawio"]},"emoji":"📐","os":["darwin","linux","win32"],"install":[{"id":"brew-drawio","kind":"brew","formula":"drawio","bins":["draw.io"],"label":"Install draw.io via Homebrew","os":["darwin"]}]},"hermes":{"tags":["drawio","diagram","flowchart","architecture","visualization","uml"],"category":"design","requires_tools":["draw.io"],"related_skills":["mermaid","excalidraw","plantuml"]},"author":"Agents365-ai","version":"1.6.1"}
+metadata: {"openclaw":{"requires":{"anyBins":["draw.io","drawio"]},"emoji":"📐","os":["darwin","linux","win32"],"install":[{"id":"brew-drawio","kind":"brew","formula":"drawio","bins":["draw.io"],"label":"Install draw.io via Homebrew","os":["darwin"]}]},"hermes":{"tags":["drawio","diagram","flowchart","architecture","visualization","uml"],"category":"design","requires_tools":["draw.io"],"related_skills":["mermaid","excalidraw","plantuml"]},"author":"Agents365-ai","version":"1.7.0"}
 ---
 
 # Draw.io Diagrams
@@ -31,6 +31,7 @@ When the workflow references one of these, read it on demand — none of them ne
 | `references/style-presets.md` | The user asks to learn / save / list / set-default / delete a style preset, or you've resolved an active preset and need the application rules |
 | `references/style-extraction.md` | You're inside the Learn flow and need the extraction procedure (called from `style-presets.md`) |
 | `references/troubleshooting.md` | An export fails, vision rejects a PNG, or a rendering looks wrong |
+| `references/citadel-km-rendering.md` | The diagram is uploaded to 学城 / km.sankuai.com / citadel (via `uploadDrawioToDocument`) — 学城's renderer differs from local draw.io (no HTML tags, ignores `&#xa;` line breaks, boxes `text;` cells unless `fillColor=none;strokeColor=none`); includes the fetchDrawio→Chrome-headless verification loop |
 | `scripts/repair_png.py` | After every `-e` PNG export — fixes draw.io's truncated IEND chunk (issue #8) |
 | `scripts/encode_drawio_url.py` | The CLI is unavailable and you need a browser-fallback diagrams.net URL |
 
