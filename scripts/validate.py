@@ -209,6 +209,49 @@ def routes_cross(pa, pb):
     return False
 
 
+def dogleg_warnings(cells, ids):
+    """Warn when an orthogonal edge's exit/entry points are misaligned.
+
+    For a vertical connection (exitY=1 → entryY=0), exit_x should equal entry_x.
+    For a horizontal connection (exitX=1 → entryX=0), exit_y should equal entry_y.
+    A mismatch > threshold produces a visible dogleg bend.
+    """
+    THRESHOLD = 3  # px — below this draw.io snaps to straight
+    warns = []
+    for c in cells:
+        if c.get("edge") != "1":
+            continue
+        style = c.get("style") or ""
+        if "orthogonal" not in style:
+            continue
+        s = endpoint(c, "source", ids)
+        t = endpoint(c, "target", ids)
+        if s is None or t is None:
+            continue
+        sx, sy = s
+        tx, ty = t
+        ey = style_num(style, "exitY")
+        ex = style_num(style, "exitX")
+        ny = style_num(style, "entryY")
+        nx = style_num(style, "entryX")
+        waypoints = edge_waypoints(c)
+        # Only check edges without waypoints (auto-routed) where exit/entry
+        # pins suggest a straight vertical or horizontal connection.
+        if waypoints:
+            continue
+        # Vertical: exits bottom (exitY=1) enters top (entryY=0)
+        if ey == 1.0 and ny == 0.0 and abs(sx - tx) > THRESHOLD:
+            warns.append(
+                f"edge {c.get('id')!r} dogleg: exit_x={sx:.0f} vs entry_x={tx:.0f} "
+                f"(diff={abs(sx-tx):.0f}px, align nodes or add exitX/entryX)")
+        # Horizontal: exits right (exitX=1) enters left (entryX=0)
+        if ex == 1.0 and nx == 0.0 and abs(sy - ty) > THRESHOLD:
+            warns.append(
+                f"edge {c.get('id')!r} dogleg: exit_y={sy:.0f} vs entry_y={ty:.0f} "
+                f"(diff={abs(sy-ty):.0f}px, align nodes or add exitY/entryY)")
+    return warns
+
+
 def geometry_warnings(cells, ids, parents):
     """Edge-through-vertex and edge-crossing warnings for waypointed edges."""
     warns = []
@@ -287,6 +330,7 @@ def check_page(diagram):
             if pa == pb and overlap(ra, rb):
                 warns.append(f"vertices {ia!r} and {ib!r} overlap")
     warns += geometry_warnings(cells, ids, parents)
+    warns += dogleg_warnings(cells, ids)
     return errors, warns
 
 
