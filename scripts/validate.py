@@ -319,6 +319,51 @@ def visual_warnings(cells, ids):
                     f"edge {eid!r} long route ({total:.0f}px, "
                     f"{ratio:.0%} of canvas diagonal)")
 
+    # --- 6. Fragile table row patterns ---
+    for c in cells:
+        if c.get("vertex") != "1":
+            continue
+        style = c.get("style") or ""
+        cid = c.get("id") or ""
+        value = c.get("value") or ""
+        if "tableRow" in style and "horizontal=0" in style and "html=1" in style:
+            if "<b>" in value or "<span" in value or "<br" in value:
+                warns.append(
+                    f"vertex {cid!r} uses tableRow+horizontal=0+html=1 with HTML tags "
+                    f"in value — known to cause garbled text rendering on export. "
+                    f"Use plain text values instead")
+
+    # --- 7. Text overflow in vertices ---
+    import re
+    def _plain_text_len(value):
+        """Estimate visible character count from a value (strip HTML tags)."""
+        if not value:
+            return 0
+        text = re.sub(r'<[^>]+>', '', value)
+        text = text.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
+        text = text.replace('&#xa;', '\n').replace('&#10;', '\n')
+        longest_line = max((len(line) for line in text.split('\n')), default=0)
+        return longest_line
+
+    for c in cells:
+        if c.get("vertex") != "1":
+            continue
+        r = rect(c)
+        if r is None:
+            continue
+        _, _, w, h = r
+        value = c.get("value") or ""
+        style = c.get("style") or ""
+        text_len = _plain_text_len(value)
+        if text_len == 0:
+            continue
+        font_size = style_num(style, "fontSize") or 12
+        estimated_text_width = text_len * font_size * 0.65
+        if w > 0 and estimated_text_width > w * 1.3:
+            warns.append(
+                f"vertex {c.get('id')!r} text likely overflows: "
+                f"~{estimated_text_width:.0f}px text in {w:.0f}px wide box")
+
     return warns
 
 
