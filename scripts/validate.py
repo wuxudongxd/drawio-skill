@@ -209,23 +209,47 @@ def routes_cross(pa, pb):
     return False
 
 
-def dogleg_warnings(cells, ids):
-    """Warn when an orthogonal edge's exit/entry points are misaligned.
+def visual_warnings(cells, ids):
+    """Comprehensive visual quality checks beyond structural correctness.
 
-    For a vertical connection (exitY=1 → entryY=0), exit_x should equal entry_x.
-    For a horizontal connection (exitX=1 → entryX=0), exit_y should equal entry_y.
-    A mismatch > threshold produces a visible dogleg bend.
+    Catches: dogleg bends, rhombus+orthogonal jogs, short arrowhead stubs,
+    long-distance routing, and extreme aspect ratios.
     """
-    THRESHOLD = 3  # px — below this draw.io snaps to straight
+    DOGLEG_THRESHOLD = 3     # px — below this draw.io snaps to straight
+    STUB_MIN = 20            # px — minimum last-segment length for arrowhead
+    LONG_ROUTE_RATIO = 0.7   # edge path > 70% of canvas diagonal
+    ASPECT_MAX = 3.5         # canvas height/width ratio
     warns = []
+
+    # --- Collect canvas bounds ---
+    all_rects = []
+    for c in cells:
+        if c.get("vertex") == "1":
+            r = abs_rect(c, {ci.get("id"): ci for ci in cells})
+            if r:
+                all_rects.append(r)
+    if all_rects:
+        min_x = min(r[0] for r in all_rects)
+        min_y = min(r[1] for r in all_rects)
+        max_x = max(r[0] + r[2] for r in all_rects)
+        max_y = max(r[1] + r[3] for r in all_rects)
+        canvas_w = max_x - min_x
+        canvas_h = max_y - min_y
+        canvas_diag = (canvas_w**2 + canvas_h**2) ** 0.5
+        if canvas_w > 0 and canvas_h / canvas_w > ASPECT_MAX:
+            warns.append(
+                f"aspect ratio {canvas_h/canvas_w:.1f}:1 exceeds {ASPECT_MAX}:1 "
+                f"(diagram too tall/narrow, consider wider layout)")
+    else:
+        canvas_diag = 0
+
     for c in cells:
         if c.get("edge") != "1":
             continue
         style = c.get("style") or ""
-        if "orthogonal" not in style:
-            continue
-        s = endpoint(c, "source", ids)
-        t = endpoint(c, "target", ids)
+        eid = c.get("id")
+        s = endpoint(c, "source", {ci.get("id"): ci for ci in cells})
+        t = endpoint(c, "target", {ci.get("id"): ci for ci in cells})
         if s is None or t is None:
             continue
         sx, sy = s
@@ -235,20 +259,66 @@ def dogleg_warnings(cells, ids):
         ny = style_num(style, "entryY")
         nx = style_num(style, "entryX")
         waypoints = edge_waypoints(c)
-        # Only check edges without waypoints (auto-routed) where exit/entry
-        # pins suggest a straight vertical or horizontal connection.
+
+        # --- 1. Dogleg: auto-routed edges (no waypoints) ---
+        if not waypoints and "orthogonal" in style:
+            # Vertical: exits bottom enters top
+            if ey == 1.0 and ny == 0.0 and abs(sx - tx) > DOGLEG_THRESHOLD:
+                warns.append(
+                    f"edge {eid!r} dogleg: exit_x={sx:.0f} vs entry_x={tx:.0f} "
+                    f"(diff={abs(sx-tx):.0f}px)")
+            # Horizontal: exits right enters left
+            if ex == 1.0 and nx == 0.0 and abs(sy - ty) > DOGLEG_THRESHOLD:
+                warns.append(
+                    f"edge {eid!r} dogleg: exit_y={sy:.0f} vs entry_y={ty:.0f} "
+                    f"(diff={abs(sy-ty):.0f}px)")
+
+        # --- 2. Dogleg: waypointed edges (consecutive near-parallel segments) ---
         if waypoints:
-            continue
-        # Vertical: exits bottom (exitY=1) enters top (entryY=0)
-        if ey == 1.0 and ny == 0.0 and abs(sx - tx) > THRESHOLD:
-            warns.append(
-                f"edge {c.get('id')!r} dogleg: exit_x={sx:.0f} vs entry_x={tx:.0f} "
-                f"(diff={abs(sx-tx):.0f}px, align nodes or add exitX/entryX)")
-        # Horizontal: exits right (exitX=1) enters left (entryX=0)
-        if ex == 1.0 and nx == 0.0 and abs(sy - ty) > THRESHOLD:
-            warns.append(
-                f"edge {c.get('id')!r} dogleg: exit_y={sy:.0f} vs entry_y={ty:.0f} "
-                f"(diff={abs(sy-ty):.0f}px, align nodes or add exitY/entryY)")
+            pts = [s] + waypoints + [t]
+            for i in range(len(pts) - 2):
+                a, b, c_pt = pts[i], pts[i+1], pts[i+2]
+                seg_len = ((b[0]-a[0])**2 + (b[1]-a[1])**2) ** 0.5
+                # Short segment between two longer segments = dogleg
+                if seg_len > 0 and seg_len < 15:
+                    warns.append(
+                        f"edge {eid!r} short waypoint segment ({seg_len:.0f}px) "
+                        f"at point {i+1} — likely dogleg")
+
+        # --- 3. Rhombus + orthogonalEdgeStyle horizontal exit ---
+        if "orthogonal" in style:
+            src_id = c.get("source")
+            if src_id and src_id in {ci.get("id") for ci in cells}:
+                src_cell = next((ci for ci in cells if ci.get("id") == src_id), None)
+                if src_cell is not None:
+                    src_style = src_cell.get("style") or ""
+                    if "rhombus" in src_style and (ex == 1.0 or ex == 0.0):
+                        warns.append(
+                            f"edge {eid!r} exits rhombus horizontally with "
+                            f"orthogonalEdgeStyle — causes visible jog at diamond "
+                            f"edge (remove edgeStyle=orthogonalEdgeStyle)")
+
+        # --- 4. Short arrowhead stub ---
+        if waypoints:
+            last_wp = waypoints[-1]
+            stub = ((last_wp[0]-tx)**2 + (last_wp[1]-ty)**2) ** 0.5
+            if stub < STUB_MIN:
+                warns.append(
+                    f"edge {eid!r} short arrowhead stub ({stub:.0f}px < {STUB_MIN}px) "
+                    f"— arrowhead sits on bend")
+
+        # --- 5. Long-distance routing ---
+        if waypoints and canvas_diag > 0:
+            pts = [s] + waypoints + [t]
+            total = sum(((pts[i+1][0]-pts[i][0])**2 +
+                         (pts[i+1][1]-pts[i][1])**2)**0.5
+                        for i in range(len(pts)-1))
+            ratio = total / canvas_diag
+            if ratio > LONG_ROUTE_RATIO:
+                warns.append(
+                    f"edge {eid!r} long route ({total:.0f}px, "
+                    f"{ratio:.0%} of canvas diagonal)")
+
     return warns
 
 
@@ -330,7 +400,7 @@ def check_page(diagram):
             if pa == pb and overlap(ra, rb):
                 warns.append(f"vertices {ia!r} and {ib!r} overlap")
     warns += geometry_warnings(cells, ids, parents)
-    warns += dogleg_warnings(cells, ids)
+    warns += visual_warnings(cells, ids)
     return errors, warns
 
 
