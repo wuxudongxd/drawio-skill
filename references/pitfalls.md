@@ -316,6 +316,12 @@ Fork 的两侧分支**深度差不超过 2 层**。如果一侧有 5 个节点�
 
 **节点精简**：每个节点只写核心名称（如"待支付"），不要加副标题/描述（如"Waiting for user to pay"）——副标题增加节点高度，导致整图过长。只有在业务术语需要解释时才加一行副标题。
 
+### 10.11 draw.io CLI 保留字
+
+**`id="join"` 会导致 draw.io CLI 导出静默失败**（`Error: Export failed`，exit code 0）。这是 draw.io v30.x 的已知 bug。`id="fork"` 不受影响。
+
+**解法**：所有 mxCell 的 id 不要用 `"join"`，改用 `"jn1"`、`"join_bar"`、`"join1"` 等替代。validate.py 会检测此问题。
+
 ## 十一、工作流程
 
 1. **每次改动必须导出 PNG 并用 vision 看图验证** — 不能只看代码。drawio 内部坐标和实际渲染可能有偏差。

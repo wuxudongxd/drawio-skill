@@ -33,6 +33,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 RESERVED = {"0", "1"}
+CLI_RESERVED = {"join"}  # draw.io v30.x CLI silently fails export with these ids
 
 
 def rect(cell):
@@ -479,6 +480,8 @@ def check_page(diagram):
                 errors.append(f"edge {cid!r} {end} {ref!r} does not exist")
         if (is_v or is_e) and cid in RESERVED:
             errors.append(f"cell {cid!r} reuses reserved id 0/1")
+        if (is_v or is_e) and cid in CLI_RESERVED:
+            errors.append(f"cell {cid!r} uses CLI-reserved id {cid!r} — draw.io export will silently fail. Rename it")
         if is_v and not is_edge_label(c):
             r = rect(c)
             if r is None or any(v != v for v in r):       # None or NaN
