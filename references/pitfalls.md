@@ -316,7 +316,21 @@ Fork 的两侧分支**深度差不超过 2 层**。如果一侧有 5 个节点�
 
 **节点精简**：每个节点只写核心名称（如"待支付"），不要加副标题/描述（如"Waiting for user to pay"）——副标题增加节点高度，导致整图过长。只有在业务术语需要解释时才加一行副标题。
 
-### 10.11 draw.io CLI 保留字
+### 10.11 Fork/Join bar 连线对齐
+
+**硬性规则**：Fork bar 到子节点、子节点到 Join bar 的连线必须是**直线**（无弯折）。
+
+**实现方式**：在 edge 上精确设置 `exitX` 使出口 x 和目标节点中心 x 完全对齐：
+```
+Fork bar 宽度=400, x=200
+左节点 center_x = 280 → exitX = (280 - 200) / 400 = 0.2
+右节点 center_x = 520 → exitX = (520 - 200) / 400 = 0.8
+```
+同理 Join bar 的 `entryX` 也需要精确计算。**不要靠 auto-route 自动路由**——auto-route 会产生 L 形弯折。
+
+**节点间距控制**：Fork/Join 区域的节点纵向间距不要超过 80px，整图高度/节点数 ≤ 120px（超过说明间距太大）。
+
+### 10.12 draw.io CLI 保留字
 
 **`id="join"` 会导致 draw.io CLI 导出静默失败**（`Error: Export failed`，exit code 0）。这是 draw.io v30.x 的已知 bug。`id="fork"` 不受影响。
 

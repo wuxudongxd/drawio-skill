@@ -262,17 +262,24 @@ def visual_warnings(cells, ids):
         waypoints = edge_waypoints(c)
 
         # --- 1. Dogleg: auto-routed edges (no waypoints) ---
-        if not waypoints and "orthogonal" in style:
-            # Vertical: exits bottom enters top
+        if not waypoints:
+            # Any vertical connection: exit bottom → entry top
             if ey == 1.0 and ny == 0.0 and abs(sx - tx) > DOGLEG_THRESHOLD:
                 warns.append(
                     f"edge {eid!r} dogleg: exit_x={sx:.0f} vs entry_x={tx:.0f} "
                     f"(diff={abs(sx-tx):.0f}px)")
-            # Horizontal: exits right enters left
-            if ex == 1.0 and nx == 0.0 and abs(sy - ty) > DOGLEG_THRESHOLD:
+            # Horizontal: exit right → entry left, only flag very small y-diffs (larger = intentional spread)
+            if ex == 1.0 and nx == 0.0 and DOGLEG_THRESHOLD < abs(sy - ty) < 15:
                 warns.append(
                     f"edge {eid!r} dogleg: exit_y={sy:.0f} vs entry_y={ty:.0f} "
                     f"(diff={abs(sy-ty):.0f}px)")
+            # Auto-routed without explicit exit/entry pins — check if source/target
+            # centers are roughly aligned (both vertically adjacent)
+            if ey is None and ny is None and ex is None and nx is None:
+                if abs(sy - ty) > 20 and abs(sx - tx) > DOGLEG_THRESHOLD:
+                    warns.append(
+                        f"edge {eid!r} likely dogleg: source_x={sx:.0f} vs target_x={tx:.0f} "
+                        f"(diff={abs(sx-tx):.0f}px, add exitX/entryX to align)")
 
         # --- 2. Dogleg: waypointed edges (consecutive near-parallel segments) ---
         if waypoints:
@@ -501,7 +508,12 @@ def check_page(diagram):
             return True
         ia, ib = ca.get("id") or "", cb.get("id") or ""
         if "ellipse" in sa and "ellipse" in sb:
-            if ia.startswith(ib) or ib.startswith(ia) or ia.replace("_outer","") == ib.replace("_outer","") or ia.replace("o","") == ib.replace("o",""):
+            import re
+            def _end_stem(x):
+                return re.sub(r'[_-]?(outer|inner|o|b)$', '', x)
+            if _end_stem(ia) == _end_stem(ib) and _end_stem(ia) != "":
+                return True
+            if ia.startswith(ib) or ib.startswith(ia):
                 return True
         return False
     boxes = [(c.get("id"), c.get("parent"), rect(c), c) for c in cells
