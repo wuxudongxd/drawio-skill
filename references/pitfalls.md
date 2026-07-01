@@ -257,16 +257,27 @@ Fork 的两侧分支**深度差不超过 2 层**。如果一侧有 5 个节点�
 
 ### 10.8 ER 图 / 表格类图表
 
-**表格宽度**：每张表的宽度必须容纳最长字段名。计算方式：`width = max(字段名字符数) × 8 + 60`（PK/FK 标注 + padding）。最小宽度 200px。
+**禁止使用 `shape=table` + `shape=tableRow`** — draw.io CLI 导出时 `tableRow;horizontal=0` 会把文字渲染成竖排乱码。**必须用 swimlane + stackLayout + text 子元素**：
 
-**字段文字**：
-- 不要在表格行内使用 HTML value（`<b>`, `<span>` 等）——draw.io 的表格行渲染器对 HTML 支持不稳定，容易产生文字重叠
-- 字段名用纯文本 value，类型信息用 `| 分隔` 或放在右侧列
-- 每张表的字段数控制在 8 个以内，超出的放"..."省略行
+```xml
+<!-- 正确：swimlane 容器 + text 子元素 -->
+<mxCell id="t" value="TableName" style="swimlane;fontStyle=1;childLayout=stackLayout;
+  horizontal=1;startSize=26;fillColor=#6c8ebf;strokeColor=#6c8ebf;fontColor=#ffffff;
+  fontSize=13;html=1;collapsible=0;whiteSpace=wrap;" vertex="1" parent="1">
+  <mxGeometry x="40" y="40" width="200" height="122" as="geometry" />
+</mxCell>
+<mxCell id="f1" value="PK  id  BIGINT" style="text;strokeColor=#6c8ebf;fillColor=#dae8fc;
+  align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;
+  whiteSpace=wrap;html=1;fontStyle=1;fontSize=11;" vertex="1" parent="t">
+  <mxGeometry y="26" width="200" height="24" as="geometry" />
+</mxCell>
+```
 
-**字号**：表头 13px bold，字段 11px regular。不要在表格内用小于 11px 的字号。
+**表格宽度**：`width = max(字段名字符数) × 8 + 60`，最小 200px。
 
-**表间间距**：水平间距 ≥ 80px，垂直间距 ≥ 60px。表太挤会导致关系连线无处路由。
+**字段数** ≤ 8，超出用省略行。**字号**：表头 13px bold，字段 11px。**表间距**：水平 ≥ 80px，垂直 ≥ 60px。
+
+**PK 行**用 `fontStyle=1`（粗体）+ 浅色填充背景。**FK 行**用 `fontStyle=2`（斜体）。
 
 ### 10.9 菱形（rhombus）出口连线
 
