@@ -357,6 +357,8 @@ def visual_warnings(cells, ids):
         text_len = _plain_text_len(value)
         if text_len == 0:
             continue
+        if "verticalLabelPosition" in style or "labelPosition" in style:
+            continue
         font_size = style_num(style, "fontSize") or 12
         has_spacingLeft = style_num(style, "spacingLeft") or 0
         estimated_text_width = text_len * font_size * 0.65 + has_spacingLeft
