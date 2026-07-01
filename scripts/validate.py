@@ -424,6 +424,9 @@ def geometry_warnings(cells, ids, parents):
     routed = []          # (edge_id, polyline, {source, target})
     for c in cells:
         if c.get("edge") == "1":
+            style = c.get("style") or ""
+            if "curved=1" in style:
+                continue
             pts = edge_route(c, ids)
             if pts:
                 routed.append((c.get("id"), pts,
