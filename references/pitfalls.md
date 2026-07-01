@@ -281,6 +281,12 @@ Fork 的两侧分支**深度差不超过 2 层**。如果一侧有 5 个节点�
 
 **禁止 `overflow=hidden`** — 这个属性会硬截文字而不是换行，导致最后几个字符消失。用 `overflow=visible` 或不写 overflow。UML 类图的属性/方法行同理。
 
+**ER 表格布局策略**：
+- **高关联度的表放近**——User 和 Order 有直接 FK 关系，不要隔两列放
+- **长距离 FK 走外围走廊**——跨域的 FK 关系线（如 User→Progress）走图的最外围（最左或最下），不要穿过中间表
+- **平行关系线间距 ≥ 20px**——多条 FK 线从同一张表出发时，用不同的 exit 点（exitX=0/0.5/1）分散路由，不要挤在一起
+- **M:N 中间表放在两个关联表的正中间**——Course_Teacher 放在 Course 和 Teacher 之间
+
 ### 10.9 菱形（rhombus）出口连线
 
 **硬性规则**：菱形节点水平方向出口（exitX=0 或 exitX=1）的连线，**禁止使用 `edgeStyle=orthogonalEdgeStyle`**。orthogonal 路由在菱形的对角边缘会产生可见的 jog（小弯折）。

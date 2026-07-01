@@ -370,6 +370,49 @@ def visual_warnings(cells, ids):
                 f"vertex {c.get('id')!r} has overflow=hidden — "
                 f"text will be clipped instead of wrapping. Remove overflow=hidden")
 
+    # --- 8. Parallel edge proximity ---
+    PARALLEL_MIN = 20  # px — minimum distance between parallel edge segments
+    by_id_map = {ci.get("id"): ci for ci in cells}
+    edge_segments = []
+    for c in cells:
+        if c.get("edge") != "1":
+            continue
+        eid = c.get("id")
+        s = endpoint(c, "source", by_id_map)
+        t = endpoint(c, "target", by_id_map)
+        if s is None or t is None:
+            continue
+        wps = edge_waypoints(c)
+        pts = [s] + wps + [t]
+        for i in range(len(pts) - 1):
+            a, b = pts[i], pts[i + 1]
+            dx, dy = b[0] - a[0], b[1] - a[1]
+            seg_len = (dx*dx + dy*dy) ** 0.5
+            if seg_len > 30:
+                edge_segments.append((eid, a, b, seg_len))
+    for i in range(len(edge_segments)):
+        for j in range(i + 1, len(edge_segments)):
+            eid_a, a1, a2, la = edge_segments[i]
+            eid_b, b1, b2, lb = edge_segments[j]
+            if eid_a == eid_b:
+                continue
+            da = (a2[0] - a1[0], a2[1] - a1[1])
+            db = (b2[0] - b1[0], b2[1] - b1[1])
+            cross = da[0] * db[1] - da[1] * db[0]
+            if abs(cross) > la * lb * 0.1:
+                continue
+            mid_a = ((a1[0]+a2[0])/2, (a1[1]+a2[1])/2)
+            mid_b = ((b1[0]+b2[0])/2, (b1[1]+b2[1])/2)
+            dist = ((mid_a[0]-mid_b[0])**2 + (mid_a[1]-mid_b[1])**2) ** 0.5
+            if dist < PARALLEL_MIN and min(la, lb) > 50:
+                warns.append(
+                    f"edges {eid_a!r} and {eid_b!r} run parallel within "
+                    f"{dist:.0f}px — hard to distinguish (space ≥{PARALLEL_MIN}px apart)")
+                break
+        else:
+            continue
+        break
+
     return warns
 
 
