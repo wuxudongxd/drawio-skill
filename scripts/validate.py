@@ -513,6 +513,26 @@ def check_page(diagram):
                 warns.append(f"vertices {ia!r} and {ib!r} overlap")
     warns += geometry_warnings(cells, ids, parents)
     warns += visual_warnings(cells, ids)
+    # --- Content completeness checks ---
+    all_values = [c.get("value") or "" for c in cells]
+    all_styles = [(c.get("style") or "") for c in cells if c.get("vertex") == "1"]
+    # Legend check: at least one element with "图例" or "legend" in value or id
+    has_legend = any("图例" in v.lower() or "legend" in v.lower()
+                     for v in all_values)
+    has_legend = has_legend or any("图例" in (c.get("id") or "") or "legend" in (c.get("id") or "")
+                                   for c in cells)
+    if not has_legend:
+        warns.append("no legend found — add a 图例/legend box explaining colors and symbols")
+    # Color variety: count distinct fillColors among vertices
+    fill_colors = set()
+    for s in all_styles:
+        for part in s.split(";"):
+            if part.startswith("fillColor=") and "none" not in part:
+                fill_colors.add(part.split("=", 1)[1].lower())
+    if len(fill_colors) < 3 and len([c for c in cells if c.get("vertex") == "1"]) > 5:
+        warns.append(
+            f"only {len(fill_colors)} fill color(s) used across {len(all_styles)} vertices "
+            f"— use color-coding by functional domain (see pitfalls §10.6)")
     return errors, warns
 
 
