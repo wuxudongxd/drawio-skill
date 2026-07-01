@@ -358,11 +358,17 @@ def visual_warnings(cells, ids):
         if text_len == 0:
             continue
         font_size = style_num(style, "fontSize") or 12
-        estimated_text_width = text_len * font_size * 0.65
-        if w > 0 and estimated_text_width > w * 1.3:
+        has_spacingLeft = style_num(style, "spacingLeft") or 0
+        estimated_text_width = text_len * font_size * 0.65 + has_spacingLeft
+        if w > 0 and estimated_text_width > w:
             warns.append(
                 f"vertex {c.get('id')!r} text likely overflows: "
-                f"~{estimated_text_width:.0f}px text in {w:.0f}px wide box")
+                f"~{estimated_text_width:.0f}px text in {w:.0f}px wide box "
+                f"(widen to {int(estimated_text_width) + 20}px)")
+        if "overflow=hidden" in style and text_len > 0:
+            warns.append(
+                f"vertex {c.get('id')!r} has overflow=hidden — "
+                f"text will be clipped instead of wrapping. Remove overflow=hidden")
 
     return warns
 

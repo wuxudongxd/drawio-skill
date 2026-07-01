@@ -279,6 +279,8 @@ Fork 的两侧分支**深度差不超过 2 层**。如果一侧有 5 个节点�
 
 **PK 行**用 `fontStyle=1`（粗体）+ 浅色填充背景。**FK 行**用 `fontStyle=2`（斜体）。
 
+**禁止 `overflow=hidden`** — 这个属性会硬截文字而不是换行，导致最后几个字符消失。用 `overflow=visible` 或不写 overflow。UML 类图的属性/方法行同理。
+
 ### 10.9 菱形（rhombus）出口连线
 
 **硬性规则**：菱形节点水平方向出口（exitX=0 或 exitX=1）的连线，**禁止使用 `edgeStyle=orthogonalEdgeStyle`**。orthogonal 路由在菱形的对角边缘会产生可见的 jog（小弯折）。
