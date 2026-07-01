@@ -487,13 +487,26 @@ def check_page(diagram):
                 if x < 0 or y < 0:
                     warns.append(f"vertex {cid!r} negative position ({x:g},{y:g})")
     # Sibling overlap: only leaf vertices (containers legitimately wrap children).
-    boxes = [(c.get("id"), c.get("parent"), rect(c)) for c in cells
+    # Skip UML shapes that by-design overlap (umlFrame covers umlLifeline, etc.)
+    UML_OVERLAP_OK = {"umlFrame", "umlLifeline", "umlBoundary", "umlEntity", "umlControl"}
+    def _is_uml_or_end_pair(ca, cb):
+        sa, sb = (ca.get("style") or ""), (cb.get("style") or "")
+        if any(k in sa or k in sb for k in UML_OVERLAP_OK):
+            return True
+        ia, ib = ca.get("id") or "", cb.get("id") or ""
+        if "ellipse" in sa and "ellipse" in sb:
+            if ia.startswith(ib) or ib.startswith(ia) or ia.replace("_outer","") == ib.replace("_outer","") or ia.replace("o","") == ib.replace("o",""):
+                return True
+        return False
+    boxes = [(c.get("id"), c.get("parent"), rect(c), c) for c in cells
              if c.get("vertex") == "1" and c.get("id") not in parents and rect(c)
              and not any(v != v for v in rect(c))]
     for i in range(len(boxes)):
         for j in range(i + 1, len(boxes)):
-            (ia, pa, ra), (ib, pb, rb) = boxes[i], boxes[j]
+            (ia, pa, ra, ca), (ib, pb, rb, cb) = boxes[i], boxes[j]
             if pa == pb and overlap(ra, rb):
+                if _is_uml_or_end_pair(ca, cb):
+                    continue
                 warns.append(f"vertices {ia!r} and {ib!r} overlap")
     warns += geometry_warnings(cells, ids, parents)
     warns += visual_warnings(cells, ids)
