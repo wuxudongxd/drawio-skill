@@ -43,7 +43,8 @@ Fork/Join bar 的宽度只需覆盖两侧分支即可，不要比分支区域宽
 ## 7. 语言和符号
 
 - 标签语言跟随 prompt 语言（中文 prompt = 中文标签）
-- UML Start = 实心黑圆（无文字），End = 靶心圆（无文字）
+- UML Start = 实心黑圆（无文字）：`style="ellipse;fillColor=#000000;strokeColor=#000000;aspect=fixed;" width="36" height="36"`
+- UML End = 靶心圆（无文字）：外圈 `style="ellipse;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=3;aspect=fixed;" width="40" height="40"` + 内圈 `style="ellipse;fillColor=#000000;strokeColor=#000000;aspect=fixed;" width="24" height="24"`（居中嵌套）
 - 节点只写核心名称，不加副标题
 - ER/表格**禁止** `shape=tableRow`，用 `swimlane+stackLayout+text` 子元素
 - `id="join"` 是 draw.io 保留字，会导致导出失败
