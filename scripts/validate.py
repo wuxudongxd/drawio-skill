@@ -418,6 +418,33 @@ def visual_warnings(cells, ids):
             continue
         break
 
+    # --- 9. Multi-edge same entry point ---
+    ENTRY_CLUSTER = 15  # px — entries closer than this are "same point"
+    target_entries = {}  # target_id → [(edge_id, entry_x, entry_y)]
+    by_id_map2 = {ci.get("id"): ci for ci in cells}
+    for c in cells:
+        if c.get("edge") != "1":
+            continue
+        tid = c.get("target")
+        if not tid:
+            continue
+        ep = endpoint(c, "target", by_id_map2)
+        if ep:
+            target_entries.setdefault(tid, []).append((c.get("id"), ep[0], ep[1]))
+    for tid, entries in target_entries.items():
+        if len(entries) < 2:
+            continue
+        for i in range(len(entries)):
+            for j in range(i + 1, len(entries)):
+                ei, xi, yi = entries[i]
+                ej, xj, yj = entries[j]
+                d = ((xi - xj)**2 + (yi - yj)**2) ** 0.5
+                if d < ENTRY_CLUSTER:
+                    tname = by_id_map2.get(tid, {}).get("value") or tid
+                    warns.append(
+                        f"edges {ei!r} and {ej!r} enter '{tname}' at nearly the same point "
+                        f"({d:.0f}px apart) — use different entryX/entryY to separate arrows")
+
     return warns
 
 
