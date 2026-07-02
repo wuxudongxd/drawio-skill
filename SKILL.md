@@ -97,7 +97,13 @@ When a preset loads successfully, mention it in the first line of the reply: *"U
    - **`long route` warnings** — accept if the route is topologically necessary (e.g., FK relationship between distant tables)
    Common fixes for other warnings: add waypoints to route edges around nodes, use multiple End nodes to avoid long-distance routing, shift nodes to eliminate overlap, remove `edgeStyle=orthogonalEdgeStyle` from rhombus horizontal exits. Max 3 validate-fix iterations — if issues persist, proceed but report remaining warnings.
 4. **Export draft** — run CLI to produce a preview PNG. **Do NOT pass `-e`** at this step — the embedded `zTXt mxGraphModel` chunk it adds causes vision APIs (Claude included) to return 400 "Could not process image" in step 5. For **TB (top-to-bottom) layouts**, cap preview width: `--width 2000` (not `-s 2`). For **LR (left-to-right) layouts**, use `-s 2` instead — `--width` squashes wide diagrams into unreadable strips. Save the clean preview as `<name>.png` (single extension). Embedding and full-resolution scale are for the final export only (step 7).
-5. **Self-check** — use the agent's built-in vision capability to read the exported PNG, catch visual issues that validate.py cannot detect (aesthetic alignment, label readability, overall balance). If reading the PNG returns a 400 / "Could not process image" error, you almost certainly exported with `-e` by mistake — re-export without `-e` and retry once. If it still fails, skip self-check and continue to step 6. After any XML fix in this step, **re-run validate.py** to ensure the fix didn't introduce structural regressions.
+5. **Self-check** — read the exported PNG with vision and check these specific items (validate.py cannot detect them):
+   - **节点完整性**：prompt 要求的所有节点/状态是否全部出现？有没有漏画？
+   - **标签可读性**：所有文字是否清晰可读？有没有被线条遮挡、被截断、或字号太小？
+   - **线条清晰度**：有没有两条线挤在一起难以区分？有没有标签重叠？
+   - **颜色一致性**：同一功能域的节点颜色是否一致？图例颜色和实际使用是否匹配？
+   - **整体比例**：图是否过高过窄或过宽过矮？主流程是否一眼可追？
+   If reading the PNG returns a 400 / "Could not process image" error, you almost certainly exported with `-e` by mistake — re-export without `-e` and retry once. If it still fails, skip self-check and continue to step 6. After any XML fix in this step, **re-run validate.py** to ensure the fix didn't introduce structural regressions.
 6. **Review loop** — show image to user, collect feedback, apply targeted XML edits, re-export, repeat until approved
 7. **Final export** — re-export the approved version to all requested formats. Use `-e` here (PNG/SVG/PDF) so the deliverable stays editable in draw.io; save as `<name>.drawio.png` to signal embedded XML. **For PNG with `-e`, run `python3 <this-skill-dir>/scripts/repair_png.py <name>.drawio.png` immediately after** — draw.io's CLI truncates the IEND chunk in `-e` PNG output (8 bytes missing), producing a corrupt file that vision APIs and strict PNG decoders reject (issue #8). Report file paths.
 

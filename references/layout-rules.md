@@ -1,6 +1,6 @@
 # 布局规则 Checklist（生成 XML 前必读）
 
-生成任何 .drawio 图之前，逐条对照。这 6 条规则解决了 90% 的出图质量问题。
+生成任何 .drawio 图之前，逐条对照。这 7 条规则解决了 90% 的出图质量问题。
 
 ## 1. 图例必须有
 
@@ -35,7 +35,7 @@
 
 Fork/Join bar 的宽度只需覆盖两侧分支即可，不要比分支区域宽太多。
 
-## 6. 菱形出口不要 orthogonalEdgeStyle (原第5条)
+## 6. 菱形出口不要 orthogonalEdgeStyle
 
 菱形水平出口（exitX=0 或 1）的连线用直连样式，不要 `edgeStyle=orthogonalEdgeStyle`——会产生弯折。垂直出口可以用。
 
