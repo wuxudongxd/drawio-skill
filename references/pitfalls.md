@@ -195,161 +195,52 @@ style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fontColor=#xxx;a
 
 **解法**:泳道标签只写层名(如"业务服务层"),设计说明放图外文字或副标题,不塞进泳道标签。
 
-## 十、布局设计（生成 XML 前必须遵守）
+## 十、布局设计（实现细节）
 
-以下规则从大量失败案例中提炼，**在规划节点位置和连线之前**就要决定好，不是事后修补能解决的。
+> **核心规则见 `references/layout-rules.md`**（7 条 checklist，Step 2 必读）。
+> 本节只保留 layout-rules.md 未覆盖的实现细节，供修复 validate.py 警告时参考。
 
-### 10.1 多终止节点
+### 10.1 异常路径走廊
 
-**硬性规则**：当多条路径（正常完成、已退款、已取消等）最终都要到达终止符号时，**每个终端状态就近放一个独立的 End 节点**。禁止所有路径汇聚到一个 End——这是长距离路由和边穿越的第一大来源。
+所有异常路径的连线走同一条**外围走廊**（图的最右侧或最左侧的固定 x 值）。走廊 x 值必须在所有节点 bbox 的外面。多条异常路径共享走廊时，用同一个 x 值避免交叉。
 
+### 10.2 Fork/Join 连线对齐
+
+Fork/Join bar 到子节点的连线必须直线。精确设置 `exitX`：
 ```
-✗ 错误：已完成 ──长线──→ End ←──长线── 已退款 ←──更长线── 已取消
-✓ 正确：已完成 → End₁    已退款 → End₂    已取消 → End₃
+Fork bar 宽度=400, x=200
+左节点 center_x=280 → exitX = (280-200)/400 = 0.2
+右节点 center_x=520 → exitX = (520-200)/400 = 0.8
 ```
+不要靠 auto-route——会产生 L 形弯折。
 
-### 10.2 异常节点位置
+### 10.3 ER 图 / 表格 XML 模板
 
-**硬性规则**：异常/终止状态（已取消、商家拒单、退款中、已退款）放在主干的**外侧**（左边缘或右边缘），永远不要放在主干脊柱上。异常节点应尽量靠近触发它的判断节点：
-
-```
-✗ 错误：商家拒单放在图底部（离商家审核很远）
-✓ 正确：商家拒单放在商家审核的同一行或下一行，水平偏移到侧面
-```
-
-### 10.3 异常路径走廊
-
-所有异常路径的连线走同一条**外围走廊**（图的最右侧或最左侧的固定 x 值）。走廊 x 值必须在所有节点 bbox 的外面，不能穿过任何节点。多条异常路径共享走廊时，用同一个 x 值避免交叉。
-
-### 10.4 主干脊柱
-
-TB 布局中，正常路径的主干应该是一条从上到下的**直线**（所有主干节点中心 x 对齐）。分支从主干**水平伸出**，不要打断主干的垂直连续性。
-
-### 10.5 Fork/Join 平衡
-
-Fork 的两侧分支**深度差不超过 2 层**。如果一侧有 5 个节点而另一侧只有 2 个，要么调整 Fork 的位置（把一些节点移到 Fork 之前），要么在短侧增加中间状态。不平衡的分支导致长距离路由。
-
-### 10.6 颜色按功能域分配
-
-同一功能域用同一色系，不同域用不同色系。常用分配：
-- 蓝色 (#dae8fc/#6c8ebf)：订单相关（待支付、已支付）
-- 橙色 (#ffe6cc/#d79b00)：商家相关（通知商家、商家接单、备餐中、待取餐）
-- 紫色 (#e1d5e7/#9673a6)：配送相关（分配配送员、配送员接单、取餐中、配送中、已送达）
-- 绿色 (#d5e8d4/#82b366)：完成状态（已完成）
-- 红色 (#f8cecc/#b85450)：异常状态（已取消、商家拒单、退款中、已退款）
-- 黄色 (#fff2cc/#d6b656)：判断节点
-
-**禁止所有正常节点用同一个颜色。**
-
-### 10.7 Fork/Join 拓扑设计
-
-**硬性规则**：Fork bar 的两侧必须有**真正独立并行的节点**，不能是顺序依赖的。放了 Fork bar 就必须有对应的 Join bar，中间是两条独立路径。
-
-```
-✗ 错误：Fork → A → B → C → D → E（全部串行，Fork 是摆设）
-✓ 正确：Fork → [左: A → B] + [右: C → D] → Join → E
-```
-
-**设计原则**：
-- Fork 的位置选择要让两侧深度接近（差不超过 2 层）
-- 如果某个业务流程是纯顺序的（无并行），不要强加 Fork/Join
-- Fork 前的节点应该是触发并行的决策点（如"商家接单后同时备餐和分配配送员"）
-
-### 10.8 ER 图 / 表格类图表
-
-**禁止使用 `shape=table` + `shape=tableRow`** — draw.io CLI 导出时 `tableRow;horizontal=0` 会把文字渲染成竖排乱码。**必须用 swimlane + stackLayout + text 子元素**：
+**禁止 `shape=tableRow`**——CLI 导出文字乱码。用 swimlane + stackLayout：
 
 ```xml
-<!-- 正确：swimlane 容器 + text 子元素 -->
 <mxCell id="t" value="TableName" style="swimlane;fontStyle=1;childLayout=stackLayout;
   horizontal=1;startSize=26;fillColor=#6c8ebf;strokeColor=#6c8ebf;fontColor=#ffffff;
   fontSize=13;html=1;collapsible=0;whiteSpace=wrap;" vertex="1" parent="1">
   <mxGeometry x="40" y="40" width="200" height="122" as="geometry" />
 </mxCell>
 <mxCell id="f1" value="PK  id  BIGINT" style="text;strokeColor=#6c8ebf;fillColor=#dae8fc;
-  align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;
+  align=left;verticalAlign=middle;spacingLeft=8;rotatable=0;
   whiteSpace=wrap;html=1;fontStyle=1;fontSize=11;" vertex="1" parent="t">
   <mxGeometry y="26" width="200" height="24" as="geometry" />
 </mxCell>
 ```
 
-**表格宽度**：`width = max(字段名字符数) × 8 + 60`，最小 200px。
+宽度=`max(字段名字符数)×8+60`，最小200px。字段≤8。**禁止`overflow=hidden`**。
+PK=fontStyle=1+浅色填充，FK=fontStyle=2。表间距：水平≥80px，垂直≥60px。
+高关联表放近、长FK走外围走廊、平行线间距≥20px、M:N中间表居中。
 
-**字段数** ≤ 8，超出用省略行。**字号**：表头 13px bold，字段 11px。**表间距**：水平 ≥ 80px，垂直 ≥ 60px。
+### 10.4 DFD / 交互图布局
 
-**PK 行**用 `fontStyle=1`（粗体）+ 浅色填充背景。**FK 行**用 `fontStyle=2`（斜体）。
-
-**禁止 `overflow=hidden`** — 这个属性会硬截文字而不是换行，导致最后几个字符消失。用 `overflow=visible` 或不写 overflow。UML 类图的属性/方法行同理。
-
-**ER 表格布局策略**：
-- **高关联度的表放近**——User 和 Order 有直接 FK 关系，不要隔两列放
-- **长距离 FK 走外围走廊**——跨域的 FK 关系线（如 User→Progress）走图的最外围（最左或最下），不要穿过中间表
-- **平行关系线间距 ≥ 20px**——多条 FK 线从同一张表出发时，用不同的 exit 点（exitX=0/0.5/1）分散路由，不要挤在一起
-- **M:N 中间表放在两个关联表的正中间**——Course_Teacher 放在 Course 和 Teacher 之间
-
-### 10.9 菱形（rhombus）出口连线
-
-**硬性规则**：菱形节点水平方向出口（exitX=0 或 exitX=1）的连线，**禁止使用 `edgeStyle=orthogonalEdgeStyle`**。orthogonal 路由在菱形的对角边缘会产生可见的 jog（小弯折）。
-
-```
-✗ 错误：style="edgeStyle=orthogonalEdgeStyle;...exitX=1;exitY=0.5;..."
-✓ 正确：style="rounded=1;html=1;...exitX=1;exitY=0.5;..."（直连，无 orthogonal）
-```
-
-菱形垂直方向出口（exitY=0 或 exitY=1）可以用 orthogonalEdgeStyle，因为垂直出口在菱形顶/底点，不会产生 jog。
-
-### 10.10 内容完整性
-
-以下元素**每张图都必须有**，validate.py 会检测缺失：
-
-**图例（Legend）**：每张图必须包含一个图例区域，说明颜色含义、线型含义、特殊符号含义。用 `swimlane` 容器，value 包含"图例"或"Legend"。validate.py 通过检查 value/id 中是否包含"图例"或"legend"来验证。
-
-**颜色多样性**：5 个以上节点的图必须使用 3 种以上 fillColor。全图同色 = 读者无法快速区分功能域。见 §10.6 的颜色分配规则。
-
-**判断节点**：流程图/状态机中如果有分支路径（同一节点出发 ≥2 条边），必须有对应的菱形判断节点标注判断条件。不能用"直接连线 + 标签"替代菱形——读者需要在视觉上识别决策点。
-
-**路径颜色区分**：正常路径和异常/错误路径必须用不同颜色 + 线型区分（如绿色实线 vs 红色虚线），不能全用黑色。
-
-**语言一致性**：节点标签语言必须跟随用户 prompt 的语言。中文 prompt 就用中文标签，不要翻译成英文。
-
-**UML 起止符号**：状态机/活动图的 Start 用实心黑圆（`ellipse;fillColor=#000000;aspect=fixed;` 不带文字），End 用靶心圆（外圈 `strokeWidth=3;fillColor=#FFFFFF` + 内圈 `fillColor=#000000`）。不要用带文字的彩色圆替代。
-
-**节点精简**：每个节点只写核心名称（如"待支付"），不要加副标题/描述（如"Waiting for user to pay"）——副标题增加节点高度，导致整图过长。只有在业务术语需要解释时才加一行副标题。
-
-### 10.11 数据流图 / 交互图布局
-
-**分层布局**：数据流图（DFD）、交互图必须按层级排列，不能散点式摆放：
-- 外部实体放在图的**最外围**（左右两侧或上下两端）
-- 处理过程放在**中间层**，按数据流方向排列（LR 或 TB）
-- 数据存储放在处理过程的**上方或下方**，靠近使用它的处理节点
-
-**避免对角线穿越**：如果一条数据流需要从左下角拉到右上角穿过整个图，说明节点位置有问题——重新排列节点让这条流变短。
-
-**双向数据流**：同一对节点之间的请求/响应（如支付请求/支付结果）用 waypoint 分开路由，不能重叠在同一条线上。一条走上方，一条走下方，间距 ≥ 20px。
-
-**外部实体可重复出现**：DFD 中同一个外部实体如果和多个处理过程交互，可以在靠近每个处理过程的位置各画一个副本（用相同样式+名称，加斜杠标记表示副本）。这避免了长距离对角线穿越整个图。
-
-**参考 visual-communication.md §4**：交互关系用 bidirectional arrows + mediator 模式，不要用蜘蛛网式的全连接。
-
-### 10.12 Fork/Join bar 连线对齐
-
-**硬性规则**：Fork bar 到子节点、子节点到 Join bar 的连线必须是**直线**（无弯折）。
-
-**实现方式**：在 edge 上精确设置 `exitX` 使出口 x 和目标节点中心 x 完全对齐：
-```
-Fork bar 宽度=400, x=200
-左节点 center_x = 280 → exitX = (280 - 200) / 400 = 0.2
-右节点 center_x = 520 → exitX = (520 - 200) / 400 = 0.8
-```
-同理 Join bar 的 `entryX` 也需要精确计算。**不要靠 auto-route 自动路由**——auto-route 会产生 L 形弯折。
-
-**节点间距控制**：Fork/Join 区域的节点纵向间距不要超过 80px，整图高度/节点数 ≤ 120px（超过说明间距太大）。
-
-### 10.12 draw.io CLI 保留字
-
-**`id="join"` 会导致 draw.io CLI 导出静默失败**（`Error: Export failed`，exit code 0）。这是 draw.io v30.x 的已知 bug。`id="fork"` 不受影响。
-
-**解法**：所有 mxCell 的 id 不要用 `"join"`，改用 `"jn1"`、`"join_bar"`、`"join1"` 等替代。validate.py 会检测此问题。
+- 外部实体在最外围，处理过程在中间，数据存储紧邻对应处理节点
+- 对角线穿越=节点位置有问题，重排而非绕路
+- 双向数据流用不同exit/entry点分开（间距≥20px）
+- 同一外部实体可画副本（加*标记）避免长连线
 
 ## 十一、工作流程
 
