@@ -25,7 +25,7 @@ When the workflow references one of these, read it on demand — none of them ne
 
 | File | Read it when |
 |---|---|
-| **`references/layout-rules.md`** | **MUST READ before every diagram (step 2)** — 6-item checklist: legend, color coding, multiple End nodes, node placement strategy, rhombus edge style, language/symbols. Solves 90% of quality issues |
+| **`references/layout-rules.md`** | **MUST READ before every diagram (step 2)** — 7-item checklist: legend, color coding, multiple End nodes, node placement, compact spacing, rhombus edge style, language/symbols. Solves 90% of quality issues |
 | `references/visual-communication.md` | Planning a non-trivial diagram (step 2) — message-first framework, comparison-type → chart-form matrix, concept-visual grammar, emphasis rules (from Zelazny's *Say It with Charts*) |
 | `references/diagram-types.md` | The user names a specific diagram type (ERD, UML class, sequence, architecture, ML/DL, flowchart) |
 | `references/pitfalls.md` | Detailed geometry rules for fixing validate.py warnings — waypoint alignment, arrowhead stubs, swimlane padding, label z-order, cascade updates. Read when editing complex XML, not needed for initial planning |
@@ -87,7 +87,7 @@ When a preset loads successfully, mention it in the first line of the reply: *"U
 
 1. **Check deps** — **resolve which name the binary has on this system** and use that name verbatim in every subsequent command in this workflow. Try in order: (a) `drawio --version` (the canonical name for Homebrew cask, jgraph `.deb`/`.rpm`, Arch AUR), (b) `draw.io --version` (older builds, some custom symlinks, some distro packages), (c) macOS `.app` direct: `/Applications/draw.io.app/Contents/MacOS/draw.io --version`, (d) Windows: `"C:\Program Files\draw.io\draw.io.exe" --version`. The first one that prints a version is your binary; remember the exact path/name and substitute it for `drawio` in every export command below. **Do not copy the example commands verbatim if your binary is named differently** — the examples use `drawio` only because it's the most common. On macOS-Homebrew, `drawio` is just a thin wrapper script that execs `/Applications/draw.io.app/Contents/MacOS/draw.io` — they run the same engine, so candidate (c) is only needed when the `drawio` wrapper is absent (e.g. the app was installed by drag-and-drop without the cask).
 2. **Plan** — write the diagram's one-sentence message first (it becomes the title), then:
-   - **Read `references/layout-rules.md`** — 6 条必遵守的布局规则 checklist（图例、颜色、多 End、节点位置、菱形出口、语言符号）。这是最高优先级，解决 90% 的出图质量问题。
+   - **Read `references/layout-rules.md`** — 7 条必遵守的布局规则 checklist（图例、颜色、多 End、节点位置、紧凑间距、菱形出口、语言符号）。这是最高优先级，解决 90% 的出图质量问题。
    - For non-trivial diagrams, also read `references/visual-communication.md` to pick the right comparison type / concept-visual grammar.
    - Identify shapes, relationships, layout direction (LR or TB), group by tier/layer.
 3. **Generate** — write `.drawio` XML file to disk. For complex diagrams with many edges/containers, also read `references/pitfalls.md` for detailed geometry rules (waypoint alignment, arrowhead stubs, swimlane padding, cascade updates) during XML editing. Default output dir is the user's working dir; if the user specified an output path or directory (e.g. `./artifacts/`, `docs/images/`), use that instead — `mkdir -p` the target dir first. Apply the same dir choice to PNG/SVG/PDF exports in steps 4 and 7.
