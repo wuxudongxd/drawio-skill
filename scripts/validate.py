@@ -273,13 +273,8 @@ def visual_warnings(cells, ids):
                 warns.append(
                     f"edge {eid!r} dogleg: exit_y={sy:.0f} vs entry_y={ty:.0f} "
                     f"(diff={abs(sy-ty):.0f}px)")
-            # Auto-routed without explicit exit/entry pins — check if source/target
-            # centers are roughly aligned (both vertically adjacent)
-            if ey is None and ny is None and ex is None and nx is None:
-                if abs(sy - ty) > 20 and abs(sx - tx) > DOGLEG_THRESHOLD:
-                    warns.append(
-                        f"edge {eid!r} likely dogleg: source_x={sx:.0f} vs target_x={tx:.0f} "
-                        f"(diff={abs(sx-tx):.0f}px, add exitX/entryX to align)")
+            # Note: auto-routed edges without exit/entry pins are NOT checked —
+            # draw.io's auto-router handles them; flagging would cause mass false positives
 
         # --- 2. Dogleg: waypointed edges (consecutive near-parallel segments) ---
         if waypoints:
